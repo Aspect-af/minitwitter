@@ -1,9 +1,7 @@
-# Compiled output
 out/
 bin/
 *.class
 
-# IDE / editor
 .idea/
 *.iml
 .vscode/
@@ -11,6 +9,5 @@ bin/
 .project
 .settings/
 
-# OS
 Thumbs.db
 .DS_Store
