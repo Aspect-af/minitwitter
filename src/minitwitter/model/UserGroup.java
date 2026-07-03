@@ -14,13 +14,21 @@ public class UserGroup implements Entry {
     private final String id;
     private final List<Entry> entries = new ArrayList<>();
 
+    /** Wall-clock time this group object was created (ms since epoch). */
+    private final long creationTime;
+
     public UserGroup(String id) {
         this.id = id;
+        this.creationTime = System.currentTimeMillis();
     }
 
     @Override
     public String getId() {
         return id;
+    }
+
+    public long getCreationTime() {
+        return creationTime;
     }
 
     /** Add a child entry (a user or a sub-group) to this group. */

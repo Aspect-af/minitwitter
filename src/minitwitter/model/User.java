@@ -27,6 +27,16 @@ public class User implements Entry, Subject, Observer {
     /** The most recent tweet posted by this user, e.g. {@code "john: hello"}. */
     private String lastTweet = "";
 
+    /** Wall-clock time this user object was created (ms since epoch). */
+    private final long creationTime;
+
+    /**
+     * Wall-clock time of the most recent news-feed update (ms since epoch);
+     * {@code 0L} until the first tweet is added, so a never-active user can be
+     * distinguished from one that has posted or received a tweet.
+     */
+    private long lastUpdateTime;
+
     /**
      * Hook used by the open {@code UserView} (if any) to refresh its news-feed
      * list whenever this user's feed changes. Stored as a plain {@link Runnable}
@@ -36,6 +46,8 @@ public class User implements Entry, Subject, Observer {
 
     public User(String id) {
         this.id = id;
+        this.creationTime = System.currentTimeMillis();
+        this.lastUpdateTime = 0L;
     }
 
     @Override
@@ -103,6 +115,7 @@ public class User implements Entry, Subject, Observer {
 
     private void addToFeed(String tweet) {
         newsFeed.add(tweet);
+        lastUpdateTime = System.currentTimeMillis();
         if (feedChangeListener != null) {
             feedChangeListener.run();
         }
@@ -122,6 +135,14 @@ public class User implements Entry, Subject, Observer {
 
     public List<String> getNewsFeed() {
         return newsFeed;
+    }
+
+    public long getCreationTime() {
+        return creationTime;
+    }
+
+    public long getLastUpdateTime() {
+        return lastUpdateTime;
     }
 
     /** Used as the node label in the admin control-panel tree. */

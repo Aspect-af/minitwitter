@@ -29,6 +29,8 @@ import javax.swing.tree.TreeSelectionModel;
 import minitwitter.model.User;
 import minitwitter.model.UserGroup;
 import minitwitter.visitor.GroupTotalVisitor;
+import minitwitter.visitor.IdValidationVisitor;
+import minitwitter.visitor.LastUpdatedUserVisitor;
 import minitwitter.visitor.MessageTotalVisitor;
 import minitwitter.visitor.PositivePercentageVisitor;
 import minitwitter.visitor.UserTotalVisitor;
@@ -123,16 +125,20 @@ public class AdminControlPanel extends JFrame {
         c.gridx = 0; c.gridy = 2; c.gridwidth = 2; c.weightx = 1; top.add(openViewBtn, c);
         controls.add(top, BorderLayout.NORTH);
 
-        // Bottom: the four analysis buttons (2 x 2 grid)
-        JPanel analysis = new JPanel(new GridLayout(2, 2, 8, 8));
+        // Bottom: the six analysis buttons (3 x 2 grid)
+        JPanel analysis = new JPanel(new GridLayout(3, 2, 8, 8));
         JButton userTotalBtn = new JButton("Show User Total");
         JButton groupTotalBtn = new JButton("Show Group Total");
         JButton messageTotalBtn = new JButton("Show Messages Total");
         JButton positiveBtn = new JButton("Show Positive Percentage");
+        JButton validateIdsBtn = new JButton("Validate IDs");
+        JButton lastUpdatedBtn = new JButton("Show Last Updated User");
         analysis.add(userTotalBtn);
         analysis.add(groupTotalBtn);
         analysis.add(messageTotalBtn);
         analysis.add(positiveBtn);
+        analysis.add(validateIdsBtn);
+        analysis.add(lastUpdatedBtn);
         controls.add(analysis, BorderLayout.SOUTH);
 
         add(controls, BorderLayout.CENTER);
@@ -162,6 +168,32 @@ public class AdminControlPanel extends JFrame {
             root.accept(v);
             info(String.format("Positive messages: %d of %d (%.1f%%)",
                     v.getPositiveCount(), v.getTotalMessages(), v.getPercentage()));
+        });
+        validateIdsBtn.addActionListener(e -> {
+            IdValidationVisitor v = new IdValidationVisitor();
+            root.accept(v);
+            if (v.isValid()) {
+                info("All IDs are valid.");
+            } else {
+                StringBuilder sb = new StringBuilder("Invalid IDs detected:");
+                if (!v.getDuplicates().isEmpty()) {
+                    sb.append("\n\nDuplicates: ").append(v.getDuplicates());
+                }
+                if (!v.getIdsWithSpaces().isEmpty()) {
+                    sb.append("\n\nContain spaces: ").append(v.getIdsWithSpaces());
+                }
+                error(sb.toString());
+            }
+        });
+        lastUpdatedBtn.addActionListener(e -> {
+            LastUpdatedUserVisitor v = new LastUpdatedUserVisitor();
+            root.accept(v);
+            User last = v.getLastUpdatedUser();
+            if (last == null) {
+                info("No user has posted or received a tweet yet.");
+            } else {
+                info("Last updated user: " + last.getId());
+            }
         });
 
         tree.expandPath(new TreePath(rootNode.getPath()));
@@ -277,10 +309,6 @@ public class AdminControlPanel extends JFrame {
                 JOptionPane.ERROR_MESSAGE);
     }
 
-    /**
-     * Custom tree renderer so groups and users are visually distinct: groups
-     * use a folder icon, users use a file/leaf icon.
-     */
     private static class EntryTreeCellRenderer extends DefaultTreeCellRenderer {
 
         private final Icon groupIcon = UIManager.getIcon("FileView.directoryIcon");

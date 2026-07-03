@@ -3,14 +3,18 @@ package minitwitter.ui;
 import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -26,6 +30,8 @@ import minitwitter.model.User;
  */
 public class UserView extends JFrame {
 
+    private static final SimpleDateFormat TIME_FMT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     private final User user;
     private final AdminControlPanel admin;
 
@@ -34,6 +40,7 @@ public class UserView extends JFrame {
 
     private JTextField followIdField;
     private JTextField tweetField;
+    private JLabel lastUpdateLabel;
 
     public UserView(User user, AdminControlPanel admin) {
         super("User View - " + user.getId());
@@ -42,10 +49,12 @@ public class UserView extends JFrame {
 
         buildUI();
 
-        // OBSERVER -> view refresh hook: rebuild the feed list on every change.
-        user.setFeedChangeListener(this::refreshNewsFeed);
+        // OBSERVER -> view refresh hook: rebuild the feed list AND the
+        // last-update timestamp on every change.
+        user.setFeedChangeListener(this::onFeedChanged);
         refreshFollowing();
         refreshNewsFeed();
+        refreshLastUpdate();
 
         setSize(420, 480);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -67,38 +76,47 @@ public class UserView extends JFrame {
         c.gridx = 0;
         c.weightx = 1;
 
-        // Row 0: follow controls
+        // Row 0: creation + last-update timestamps
+        JPanel infoPanel = new JPanel(new GridLayout(2, 1));
+        infoPanel.setBorder(BorderFactory.createTitledBorder("Timestamps"));
+        infoPanel.add(new JLabel("Created: " + formatTime(user.getCreationTime())));
+        lastUpdateLabel = new JLabel();
+        infoPanel.add(lastUpdateLabel);
+        c.gridy = 0; c.weighty = 0;
+        main.add(infoPanel, c);
+
+        // Row 1: follow controls
         followIdField = new JTextField();
         followIdField.setToolTipText("User Id to follow");
         JButton followBtn = new JButton("Follow User");
         JPanel followPanel = new JPanel(new BorderLayout(6, 0));
         followPanel.add(labeled("User Id", followIdField), BorderLayout.CENTER);
         followPanel.add(followBtn, BorderLayout.EAST);
-        c.gridy = 0; c.weighty = 0;
+        c.gridy = 1; c.weighty = 0;
         main.add(followPanel, c);
 
-        // Row 1: current following list (grows)
+        // Row 2: current following list (grows)
         JList<String> followingList = new JList<>(followingModel);
         JScrollPane followingScroll = new JScrollPane(followingList);
         followingScroll.setBorder(BorderFactory.createTitledBorder("Current Following"));
-        c.gridy = 1; c.weighty = 0.5;
+        c.gridy = 2; c.weighty = 0.5;
         main.add(followingScroll, c);
 
-        // Row 2: tweet controls
+        // Row 3: tweet controls
         tweetField = new JTextField();
         tweetField.setToolTipText("Type a tweet");
         JButton postBtn = new JButton("Post Tweet");
         JPanel tweetPanel = new JPanel(new BorderLayout(6, 0));
         tweetPanel.add(labeled("Tweet Message", tweetField), BorderLayout.CENTER);
         tweetPanel.add(postBtn, BorderLayout.EAST);
-        c.gridy = 2; c.weighty = 0;
+        c.gridy = 3; c.weighty = 0;
         main.add(tweetPanel, c);
 
-        // Row 3: news feed list (grows)
+        // Row 4: news feed list (grows)
         JList<String> newsFeedList = new JList<>(newsFeedModel);
         JScrollPane newsFeedScroll = new JScrollPane(newsFeedList);
         newsFeedScroll.setBorder(BorderFactory.createTitledBorder("News Feed"));
-        c.gridy = 3; c.weighty = 0.5;
+        c.gridy = 4; c.weighty = 0.5;
         main.add(newsFeedScroll, c);
 
         setContentPane(main);
@@ -157,6 +175,21 @@ public class UserView extends JFrame {
         for (String tweet : user.getNewsFeed()) {
             newsFeedModel.addElement(tweet);
         }
+    }
+
+    private void refreshLastUpdate() {
+        long t = user.getLastUpdateTime();
+        lastUpdateLabel.setText("Last updated: " + (t == 0L ? "never" : formatTime(t)));
+    }
+
+    /** Feed-change hook: refreshes both the feed list and the timestamp label. */
+    private void onFeedChanged() {
+        refreshNewsFeed();
+        refreshLastUpdate();
+    }
+
+    private static String formatTime(long millis) {
+        return TIME_FMT.format(new Date(millis));
     }
 
     private void error(String message) {
